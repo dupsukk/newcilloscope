@@ -16,6 +16,7 @@ static void MX_GPIO_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_USART2_UART_Init(void);
 void MX_DMA_Init(void);
+int Get_Voltage(int,uint16_t);
 
 
 
@@ -51,9 +52,8 @@ int main(void)
 	  HAL_ADC_Start(&hadc1);
 	 // HAL_ADC_Start_DMA(&hadc1);
 	  HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-	  uint16_t adc_value= HAL_GetValue(&hadc1);
-
-	  printf("adc value:%d\n",adc_value);
+	  uint16_t adc_value= HAL_ADC_GetValue(&hadc1);
+	  printf("adc value:%d\n, voltage:%dmv \r\n\n",adc_value, Get_Voltage(1,adc_value));
 	  HAL_Delay(1000);
 
 
@@ -203,33 +203,6 @@ static void MX_USART2_UART_Init(void)
 
 
 
-
-void MX_DMA_Init(void) {
-    /* DMA 컨트롤러 클럭 활성화 */
-    __HAL_RCC_DMA1_CLK_ENABLE();  //  DMA1의 클럭을 켜야 동작함
-
-    /* DMA1 스트림 0 설정 (ADC1과 연결) */
-    hdma_adc1.Instance = DMA1_Stream0;  //  DMA1의 Stream 0 사용
-    hdma_adc1.Init.Channel = DMA_CHANNEL_0;  //  ADC1과 연결된 채널 사용
-    hdma_adc1.Init.Direction = DMA_PERIPH_TO_MEMORY; //  "주변장치(ADC) → 메모리" 데이터 이동
-    hdma_adc1.Init.PeriphInc = DMA_PINC_DISABLE;  //  ADC의 주소는 고정됨
-    hdma_adc1.Init.MemInc = DMA_MINC_ENABLE;  //  메모리 주소는 증가 (버퍼에 계속 저장)
-    hdma_adc1.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;  //  ADC 데이터 크기 (16비트)
-    hdma_adc1.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;  //  메모리에도 16비트 크기로 저장
-    hdma_adc1.Init.Mode = DMA_CIRCULAR;  //  버퍼가 다 차면 처음부터 다시 저장 (계속 측정 가능)
-    hdma_adc1.Init.Priority = DMA_PRIORITY_HIGH;  //  ADC는 중요한 작업이므로 높은 우선순위
-    hdma_adc1.Init.FIFOMode = DMA_FIFOMODE_DISABLE;  //  FIFO 사용 안 함 (필요 없음)
-
-    //  DMA 설정을 적용
-    if (HAL_DMA_Init(&hdma_adc1) != HAL_OK) {
-        Error_Handler();
-    }
-
-    /* ADC와 DMA 연결 */
-    __HAL_LINKDMA(&hadc1, DMA_Handle, hdma_adc1);  //  ADC1이 DMA를 사용하도록 설정
-}
-
-
 static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -288,6 +261,22 @@ void MPU_Config(void)
   HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
 
 }
+
+int Get_Voltage(int scale, uint16_t adc_integer){
+	if(scale==1){
+		return (adc_integer*3300/65535);
+	}
+	else if(scale==2){
+		return 0;
+	}
+	else{
+		printf("improper scale");
+		return -1;
+	}
+}
+
+
+
 
 
 void Error_Handler(void)
